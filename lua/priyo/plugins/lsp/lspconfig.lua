@@ -69,15 +69,7 @@ return {
 
 		-- used to enable autocompletion (assign to every lsp server config)
 		local capabilities = cmp_nvim_lsp.default_capabilities()
-		require("lspconfig").eslint.setup({
-			capabilities = capabilities,
-			on_new_config = function(config, new_root_dir)
-				config.settings.workspaceFolder = {
-					uri = vim.uri_from_fname(new_root_dir),
-					name = vim.fn.fnamemodify(new_root_dir, ":t"),
-				}
-			end,
-		})
+
 		-- Change the Diagnostic symbols in the sign column (gutter)
 		-- (not in youtube nvim video)
 		local signs = { Error = " ", Warn = " ", Hint = "󰠠 ", Info = " " }
@@ -93,37 +85,23 @@ return {
 					capabilities = capabilities,
 				})
 			end,
-			["ts_ls"] = function()
-				lspconfig["ts_ls"].setup({
-					capabilities = capabilities,
-					root_dir = require("lspconfig").util.root_pattern(
-						"tsconfig.json",
-						"package.json",
-						"jsconfig.json",
-						".git"
-					),
-					on_attach = function(client)
-						client.server_capabilities.documentFormattingProvider = false -- Disable formatting if you prefer Prettier
-					end,
-				})
-			end,
 			["eslint"] = function()
 				lspconfig["eslint"].setup({
 					capabilities = capabilities,
-					root_dir = lspconfig.util.root_pattern(".eslintrc.js", ".git"),
-					settings = {
-						format = false,
-						workingDirectory = {
-							mode = "auto",
-						},
-					},
+					on_init = function(client)
+						client.config.settings = {
+							workingDirectory = { mode = "auto" },
+						}
+						client.notify("workspace/didChangeConfiguration", { settings = client.config.settings })
+						return true
+					end,
 				})
 			end,
 			["svelte"] = function()
 				-- configure svelte server
 				lspconfig["svelte"].setup({
 					capabilities = capabilities,
-					on_attach = function(client)
+					on_attach = function(client, bufnr)
 						vim.api.nvim_create_autocmd("BufWritePost", {
 							pattern = { "*.js", "*.ts" },
 							callback = function(ctx)
